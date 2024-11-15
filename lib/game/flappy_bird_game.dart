@@ -1,24 +1,13 @@
-import 'dart:async'; // Ensure this is imported
-import 'package:flame/events.dart';
-import 'package:flame/game.dart';
-import 'package:flame/components.dart';
-import 'package:flutter/material.dart';
-import 'dart:math'; // For random number generation
-
-
-import '../background_component.dart';
-import 'game_over_screen.dart';
-
-
 import 'dart:async';
-import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/components.dart';
+import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 
 import '../background_component.dart';
 import '../components/restart_button.dart';
+import 'game_over_screen.dart';
 
 class FlappyBirdGame extends FlameGame with TapDetector {
   late final SpriteComponent bird;
@@ -30,7 +19,8 @@ class FlappyBirdGame extends FlameGame with TapDetector {
   final Random _random = Random();
   late TimerComponent obstacleTimer;
   bool isGameOver = false;
-  bool gamePaused = false;
+
+  GameOverScreen? gameOverScreen;
 
   @override
   Future<void> onLoad() async {
@@ -54,7 +44,7 @@ class FlappyBirdGame extends FlameGame with TapDetector {
 
   @override
   void update(double dt) {
-    if (isGameOver) return;
+    if (isGameOver) return; // Stop updating the game when it's over
 
     super.update(dt);
 
@@ -98,7 +88,7 @@ class FlappyBirdGame extends FlameGame with TapDetector {
 
   @override
   void onTapDown(TapDownInfo info) {
-    if (isGameOver) return;
+    if (isGameOver) return; // No action on tap if the game is over
     isFlapping = true;
   }
 
@@ -130,27 +120,30 @@ class FlappyBirdGame extends FlameGame with TapDetector {
     obstacles.add(obstacle);
   }
 
-  void flap() {
-    if (isGameOver) return;
-    isFlapping = true;
-  }
-
   void gameOver() {
     isGameOver = true;
-    gamePaused = true; // Ensure the game is paused
-    add(GameOverScreen()); // Add GameOverScreen
+
+    // Display the Game Over Screen
+    gameOverScreen = GameOverScreen();
+    add(gameOverScreen!);
+
+    // Pause the game loop
+    pauseEngine();
   }
 
   void restart() {
     isGameOver = false;
-    gamePaused = false; // Resume the game
 
+    // Reset bird's position and movement
     bird.position = Vector2(size.x / 4, size.y / 2);
     birdYSpeed = 0;
     flapStrength = -150;
+
+    // Remove obstacles
     obstacles.forEach(remove);
     obstacles.clear();
 
+    // Reset the obstacle timer
     remove(obstacleTimer);
     obstacleTimer = TimerComponent(
       period: 2,
@@ -158,5 +151,14 @@ class FlappyBirdGame extends FlameGame with TapDetector {
       onTick: () => addObstacle(),
     );
     add(obstacleTimer);
+
+    // Remove the game over screen
+    if (gameOverScreen != null) {
+      remove(gameOverScreen!);
+      gameOverScreen = null;
+    }
+
+    // Restart the game loop
+    resumeEngine();
   }
 }
